@@ -1,70 +1,84 @@
-require("dotenv").config();
-const { Telegraf } = require("telegraf");
-const fetch = require("node-fetch");
+require('dotenv').config();
+const { Telegraf } = require('telegraf');
+const fetch = require('node-fetch');
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+const bot = new Telegraf(process.env.TOKEN);
+const API_KEY = process.env.API_KEY;
+const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${API_KEY}`;
 
 const predefinedResponses = {
   "who are you": "I am Duo, your personal assistant created to assist you. I was developed by Samartha GS. Learn more at [samarthags.cloud](https://samarthags.cloud).",
-  "who developed you": "I was developed by Samartha GS, a 16-year-old tech enthusiast who loves web development, IoT, and AI.",
+  "who developed you": "I was developed by Samartha GS, a 16-year-old tech enthusiast who loves web development, IoT, and AI. He has completed over 50 amazing projects!",
   "where are you from": "I am from Golagodu, a beautiful village near Sagara in Karnataka, India.",
   "what can you do": "I can answer your questions, provide information, and chat about various topics. Let me know how I can assist you!",
-  "who is samartha gs": "Samartha GS is a talented 16-year-old passionate about web development, IoT, and AI. He has completed over 50 projects!",
-  "do you know samartha gs": "Yes, Samartha GS is my creator! Learn more at [samarthags.cloud](https://samarthags.cloud).",
+  "who is samartha gs": "Samartha GS is a talented 16-year-old passionate about web development, IoT, and AI. He has completed over 50 projects, including websites and apps.",
+  "do you know samartha gs": "Yes, Samartha GS is my creator! A skilled individual passionate about technology and innovation. Learn more about him at [samarthags.cloud](https://samarthags.cloud).",
   "samartha gs": "Samartha GS - I am here because of him!",
-  "hi": "Hi, I'm Duo - Developed by Samartha! How can I help you today?",
-  "hello": "Hello, I'm Duo - Developed by Samartha! How can I help you today?",
+  "hi": "Hi, I'm Duo - Developed by Samartha. How can I help you today?",
+  "hello": "Hello, I'm Duo - Developed by Samartha. How can I help you today?",
 };
 
-// Function to find predefined response
 const findPredefinedResponse = (message) => {
   message = message.toLowerCase();
+
+  const commonPrefixes = [
+    "tell me about", "can you explain", "what do you know about",
+    "do you know about", "i want to know about"
+  ];
+
+  for (const prefix of commonPrefixes) {
+    if (message.startsWith(prefix)) {
+      message = message.replace(prefix, "").trim();
+      break;
+    }
+  }
+
   return predefinedResponses[message] || null;
 };
 
-// Function to call Gemini API
-const getAIResponse = async (text) => {
+const generateAIResponse = async (userMessage) => {
   try {
-    const response = await fetch(GEMINI_API_URL, {
+    const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text }] }],
+        contents: [{ role: "user", parts: [{ text: userMessage }] }]
       }),
     });
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.error.message);
-    return data.candidates[0].content.parts[0].text;
+
+    return data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, "$1");
   } catch (error) {
-    return `Error: ${error.message}`;
+    return "Sorry, I couldn't process your request.";
   }
 };
 
-// Typing Effect Simulation
-const sendTypingEffect = async (ctx, message) => {
-  await ctx.sendChatAction("typing");
-  await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate typing delay
-  await ctx.reply(message, { parse_mode: "Markdown" });
-};
+bot.start((ctx) => ctx.reply("Hello! Your bot is now running on Render."));
 
-// Handle user messages
 bot.on("text", async (ctx) => {
-  const userMessage = ctx.message.text.trim();
+  const userMessage = ctx.message.text;
   const predefinedResponse = findPredefinedResponse(userMessage);
 
   if (predefinedResponse) {
-    await sendTypingEffect(ctx, predefinedResponse);
+    ctx.reply(predefinedResponse);
   } else {
-    const aiResponse = await getAIResponse(userMessage);
-    await sendTypingEffect(ctx, aiResponse);
+    ctx.reply("Thinking...");
+    const aiResponse = await generateAIResponse(userMessage);
+    ctx.reply(aiResponse);
   }
 });
 
-// Start the bot
-bot.launch().then(() => console.log("Bot is running..."));
+bot.launch();
+console.log("Bot is running...");
 
-// Graceful stop
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+// Graceful shutdown
+process.on("SIGINT", () => {
+  bot.stop("SIGINT");
+  console.log("Bot stopped");
+});
+process.on("SIGTERM", () => {
+  bot.stop("SIGTERM");
+  console.log("Bot stopped");
+});
