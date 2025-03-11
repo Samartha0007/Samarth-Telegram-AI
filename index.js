@@ -1,35 +1,48 @@
-const TelegramBot = require('node-telegram-bot-api');
+const TelegramBot = require("node-telegram-bot-api");
+const axios = require("axios");
 
-// Get bot token from Render environment
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(TOKEN, { polling: true });
+// Load environment variables
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const activeUsers = new Map();
+const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
+// Function to get response from Gemini AI
+async function getGeminiResponse(userMessage) {
+    try {
+        const response = await axios.post(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText?key=${GEMINI_API_KEY}`,
+            {
+                prompt: { text: userMessage }
+            }
+        );
 
-    if (!activeUsers.has(chatId)) {
-        activeUsers.set(chatId, setInterval(() => {
-            bot.sendMessage(chatId, "Hello!");
-        }, 20000));
-
-        bot.sendMessage(chatId, "Bot started! You'll receive 'Hello' every 20 sec.");
-    } else {
-        bot.sendMessage(chatId, "You're already receiving messages.");
+        if (response.data && response.data.candidates && response.data.candidates.length > 0) {
+            return response.data.candidates[0].output;
+        } else {
+            return "Sorry, I couldn't generate a response.";
+        }
+    } catch (error) {
+        console.error("Gemini API Error:", error.response ? error.response.data : error.message);
+        return "Error: Unable to process your request.";
     }
+}
+
+// Handle messages
+bot.on("message", async (msg) => {
+    const chatId = msg.chat.id;
+    const userMessage = msg.text;
+
+    if (!userMessage) return;
+
+    // Send typing indicator
+    bot.sendChatAction(chatId, "typing");
+
+    // Get AI response
+    const botReply = await getGeminiResponse(userMessage);
+
+    // Send response
+    bot.sendMessage(chatId, botReply);
 });
 
-bot.onText(/\/stop/, (msg) => {
-    const chatId = msg.chat.id;
-
-    if (activeUsers.has(chatId)) {
-        clearInterval(activeUsers.get(chatId));
-        activeUsers.delete(chatId);
-        bot.sendMessage(chatId, "Stopped sending messages.");
-    } else {
-        bot.sendMessage(chatId, "You were not receiving messages.by sammu");
-    }
-});
-
-console.log("Bot is running...");
+console.log("AI Telegram Bot is running...");
