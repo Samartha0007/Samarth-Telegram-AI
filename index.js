@@ -12,7 +12,7 @@ bot.onText(/\/start/, (msg) => {
     if (!activeUsers.has(chatId)) {
         activeUsers.set(chatId, setInterval(() => {
             bot.sendMessage(chatId, "Hello!");
-        }, 2000));
+        }, 20000));
 
         bot.sendMessage(chatId, "Bot started! You'll receive 'Hello' every 20 sec.");
     } else {
@@ -28,7 +28,7 @@ bot.onText(/\/stop/, (msg) => {
         activeUsers.delete(chatId);
         bot.sendMessage(chatId, "Stopped sending messages.");
     } else {
-        bot.sendMessage(chatId, "You were not receiving messages.");
+        bot.sendMessage(chatId, "You were not receiving messages.by sammu");
     }
 });
 
