@@ -1,1 +1,11 @@
-
+{
+  "name": "Samarth-Telegram-AI",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.61.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
