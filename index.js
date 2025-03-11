@@ -12,7 +12,7 @@ bot.onText(/\/start/, (msg) => {
     if (!activeUsers.has(chatId)) {
         activeUsers.set(chatId, setInterval(() => {
             bot.sendMessage(chatId, "Hello!");
-        }, 20000));
+        }, 2000));
 
         bot.sendMessage(chatId, "Bot started! You'll receive 'Hello' every 20 sec.");
     } else {
